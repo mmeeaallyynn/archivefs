@@ -21,6 +21,7 @@ use polyfuse::{
 
 use anyhow::{bail, ensure, Result};
 use std::{io, path::PathBuf, time::Duration};
+use std::ffi::CString;
 
 use clap::{Arg, App, crate_name, crate_version};
 use std::os::unix::io::AsRawFd;
@@ -763,6 +764,13 @@ fn main() -> Result<()> {
 		})
 		.write_style(WriteStyle::Auto)
 		.init();
+
+	// libarchive always tries to convert the pathname to the current locale, but the letters might not exist.
+	// This sets a generic locale for this process.
+	let c_utf8 = CString::new("C.utf8").unwrap();
+	unsafe {
+		libc::uselocale(libc::newlocale(libc::LC_ALL_MASK, c_utf8.as_ptr(), std::ptr::null_mut()));
+	}
 
 	let mut fs = ArchiveFS {
 		archive_path: String::from(matches.value_of("ARCHIVEPATH").unwrap()),
